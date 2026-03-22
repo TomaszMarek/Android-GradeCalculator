@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">NazwaProjektu1</string>
+    <string name="komunikat">Pole nie może być puste</string>
+    <string name="komunikat2">Liczba ocen musi należeć do przedziału od 5 do 15</string>
+
+    <string-array name="wszystkieOceny">
+        <item>Aplikacje Mobilne Android</item>
+        <item>Aplikacje Mobilne iOS</item>
+        <item>Aplikacje w chmurze</item>
+        <item>Bazy SQL i NoSQL</item>
+        <item>Interakcja człowiek-komputer</item>
+        <item>Integracja systemów</item>
+        <item>Programowanie Haskell</item>
+        <item>Programowanie Java</item>
+        <item>Programowanie Kotlin</item>
+        <item>Programowanie Prolog</item>
+        <item>Programowanie w C#</item>
+        <item>Programowanie w C++</item>
+        <item>Programowanie w Python</item>
+        <item>Projekt zespołowy</item>
+        <item>Szkielety programistyczne</item>
+    </string-array>
+</resources>
