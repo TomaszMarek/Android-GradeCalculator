@@ -2,6 +2,7 @@ package com.example.nazwaprojektu1;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
@@ -14,10 +15,15 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.Locale;
+
 public class MainActivity extends AppCompatActivity {
-    EditText edit1, edit2, edit3;
-    Button btnMarks, btnGood, btnNotGood;
-    TextView tvAverage;
+    private EditText edit1, edit2, edit3;
+    private Button btnMarks, btnGood, btnNotGood;
+    private TextView tvAverage;
+    private double aktualnaSrednia = 0.0;
+    private boolean czyPokazacSrednia = false;
+
     private ActivityResultLauncher<Intent> activityResultLauncher;
 
     @Override
@@ -25,7 +31,6 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Inicjalizacja pól
         edit1 = findViewById(R.id.editImie);
         edit2 = findViewById(R.id.editNazwisko);
         edit3 = findViewById(R.id.editOceny);
@@ -34,7 +39,11 @@ public class MainActivity extends AppCompatActivity {
         btnNotGood = findViewById(R.id.btnNotGood);
         tvAverage = findViewById(R.id.tvAverage);
 
-        // obsluga wynikow z innej aktywnosci
+        btnMarks.setVisibility(View.GONE);
+        btnGood.setVisibility(View.GONE);
+        btnNotGood.setVisibility(View.GONE);
+        tvAverage.setVisibility(View.GONE);
+
         activityResultLauncher = registerForActivityResult(
                 new ActivityResultContracts.StartActivityForResult(),
                 result -> {
@@ -43,24 +52,21 @@ public class MainActivity extends AppCompatActivity {
                         String imie = data.getStringExtra("imie");
                         String nazwisko = data.getStringExtra("nazwisko");
                         String liczbaOcen = data.getStringExtra("liczbaOcen");
-                        double wynikSrednia = data.getDoubleExtra("wynikSrednia", 0);
-                        boolean pokazWynikSrednia = data.getBooleanExtra("pokazWynikSrednia", false);
+                        aktualnaSrednia = data.getDoubleExtra("wynikSrednia", 0.0);
+                        czyPokazacSrednia = data.getBooleanExtra("pokazWynikSrednia", false);
 
-                        edit1.setText(imie);
-                        edit2.setText(nazwisko);
-                        edit3.setText(liczbaOcen);
+                        if (imie != null) edit1.setText(imie);
+                        if (nazwisko != null) edit2.setText(nazwisko);
+                        if (liczbaOcen != null) edit3.setText(liczbaOcen);
 
-                        updateAverageScoreAndButtons(wynikSrednia, pokazWynikSrednia);
+                        updateAverageScoreAndButtons(aktualnaSrednia, czyPokazacSrednia);
                     }
                 }
         );
 
-        btnMarks.setVisibility(View.GONE);
-        //Wyklad strona 104
         TextWatcher textWatcher = new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -68,32 +74,33 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {
-            }
+            public void afterTextChanged(Editable s) {}
         };
 
         TextWatcher ocenyTextWatcher = new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (!s.toString().isEmpty()) {
-                    int oceny = Integer.parseInt(s.toString());
-                    if (oceny < 5 || oceny > 15) {
-                        edit3.setError(getString(R.string.komunikat2));
-                        showToast("Liczba ocen musi należeć do przedziału od 5 do 15");
-                    } else {
-                        edit3.setError(null);
+                String str = s.toString().trim();
+                if (!str.isEmpty()) {
+                    try {
+                        int oceny = Integer.parseInt(str);
+                        if (oceny < 5 || oceny > 15) {
+                            edit3.setError("Liczba ocen musi należeć do przedziału 5-15");
+                        } else {
+                            edit3.setError(null);
+                        }
+                    } catch (NumberFormatException e) {
+                        edit3.setError("Nieprawidłowa liczba");
                     }
                 }
                 checkFieldsForEmptyValues();
             }
 
             @Override
-            public void afterTextChanged(Editable s) {
-            }
+            public void afterTextChanged(Editable s) {}
         };
 
         edit1.addTextChangedListener(textWatcher);
@@ -101,85 +108,81 @@ public class MainActivity extends AppCompatActivity {
         edit3.addTextChangedListener(ocenyTextWatcher);
 
         edit1.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus && edit1.getText().toString().isEmpty()) {
-                edit1.setError(getString(R.string.komunikat));
-                showToast("Pole Imię jest puste");
+            if (!hasFocus && edit1.getText().toString().trim().isEmpty()) {
+                edit1.setError("Pole Imię jest puste");
             }
             checkFieldsForEmptyValues();
         });
 
         edit2.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus && edit2.getText().toString().isEmpty()) {
-                edit2.setError(getString(R.string.komunikat));
-                showToast("Pole Nazwisko jest puste");
+            if (!hasFocus && edit2.getText().toString().trim().isEmpty()) {
+                edit2.setError("Pole Nazwisko jest puste");
             }
             checkFieldsForEmptyValues();
         });
 
         edit3.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus && edit3.getText().toString().isEmpty()) {
-                edit3.setError(getString(R.string.komunikat));
-                showToast("Pole Liczba Ocen jest puste");
+            if (!hasFocus && edit3.getText().toString().trim().isEmpty()) {
+                edit3.setError("Pole Liczba Ocen jest puste");
             }
             checkFieldsForEmptyValues();
         });
 
         btnMarks.setOnClickListener(view -> {
-            Intent intent1 = new Intent(MainActivity.this, MainActivity2.class);
-            intent1.putExtra("liczbaPrzedmiotow", edit3.getText().toString());
-            intent1.putExtra("imie", edit1.getText().toString());
-            intent1.putExtra("nazwisko", edit2.getText().toString());
-            activityResultLauncher.launch(intent1);
+            Intent intent = new Intent(MainActivity.this, MainActivity2.class);
+            intent.putExtra("liczbaPrzedmiotow", edit3.getText().toString().trim());
+            intent.putExtra("imie", edit1.getText().toString().trim());
+            intent.putExtra("nazwisko", edit2.getText().toString().trim());
+            activityResultLauncher.launch(intent);
         });
+
+        btnGood.setOnClickListener(v -> showToast("Gratulacje! Otrzymujesz zaliczenie!"));
+        btnNotGood.setOnClickListener(v -> showToast("Wysyłam podanie o zaliczenie warunkowe"));
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle outState) {
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        //Istotne przy obrocie
         outState.putString("imie", edit1.getText().toString());
         outState.putString("nazwisko", edit2.getText().toString());
         outState.putString("liczbaOcen", edit3.getText().toString());
-
-        double wynikSrednia = 0;
-        try {
-            wynikSrednia = Double.parseDouble(tvAverage.getText().toString().replace("Średnia wyników: ", ""));
-        } catch (NumberFormatException e) {
-            e.printStackTrace();
-        }
-
-        outState.putDouble("wynikSrednia", wynikSrednia);
-        outState.putBoolean("pokazWynikSrednia", tvAverage.getVisibility() == View.VISIBLE);
-        outState.putBoolean("showBtnGood", btnGood.getVisibility() == View.VISIBLE);
-        outState.putBoolean("showBtnNotGood", btnNotGood.getVisibility() == View.VISIBLE);
+        outState.putDouble("wynikSrednia", aktualnaSrednia);
+        outState.putBoolean("pokazWynikSrednia", czyPokazacSrednia);
     }
 
-    //odtworzenie stanu aktywnosci
     @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
-        edit1.setText(savedInstanceState.getString("imie"));
-        edit2.setText(savedInstanceState.getString("nazwisko"));
-        edit3.setText(savedInstanceState.getString("liczbaOcen"));
+        edit1.setText(savedInstanceState.getString("imie", ""));
+        edit2.setText(savedInstanceState.getString("nazwisko", ""));
+        edit3.setText(savedInstanceState.getString("liczbaOcen", ""));
+        aktualnaSrednia = savedInstanceState.getDouble("wynikSrednia", 0.0);
+        czyPokazacSrednia = savedInstanceState.getBoolean("pokazWynikSrednia", false);
 
-        double wynikSrednia = savedInstanceState.getDouble("wynikSrednia", 0);
-        boolean pokazWynikSrednia = savedInstanceState.getBoolean("pokazWynikSrednia", false);
-
-        updateAverageScoreAndButtons(wynikSrednia, pokazWynikSrednia);
-        showRelevantButton(wynikSrednia);
-
+        if (czyPokazacSrednia) {
+            updateAverageScoreAndButtons(aktualnaSrednia, true);
+        }
     }
 
     private void checkFieldsForEmptyValues() {
-        //konwertuje i przypisuje tekst z edita do stringa
-        String s1 = edit1.getText().toString();
-        String s2 = edit2.getText().toString();
-        String s3 = edit3.getText().toString();
+        String s1 = edit1.getText().toString().trim();
+        String s2 = edit2.getText().toString().trim();
+        String s3 = edit3.getText().toString().trim();
 
-        if (s1.isEmpty() || s2.isEmpty() || s3.isEmpty() || Integer.parseInt(s3) < 5 || Integer.parseInt(s3) > 15) {
+        if (s1.isEmpty() || s2.isEmpty() || s3.isEmpty()) {
             btnMarks.setVisibility(View.GONE);
-        } else {
-            btnMarks.setVisibility(View.VISIBLE);
+            return;
+        }
+
+        try {
+            int oceny = Integer.parseInt(s3);
+            if (oceny >= 5 && oceny <= 15) {
+                btnMarks.setVisibility(View.VISIBLE);
+            } else {
+                btnMarks.setVisibility(View.GONE);
+            }
+        } catch (NumberFormatException e) {
+            btnMarks.setVisibility(View.GONE);
         }
     }
 
@@ -187,24 +190,20 @@ public class MainActivity extends AppCompatActivity {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
     }
 
-    private void showRelevantButton(double wynikSrednia) {
+    private void updateAverageScoreAndButtons(double wynikSrednia, boolean pokazWynikSrednia) {
+        if (!pokazWynikSrednia) return;
+
+        String formatted = String.format(Locale.getDefault(), "%.2f", wynikSrednia);
+        tvAverage.setText(String.format("Średnia wyników: %s", formatted));
+        tvAverage.setVisibility(View.VISIBLE);
 
         btnGood.setVisibility(View.GONE);
         btnNotGood.setVisibility(View.GONE);
 
-        if (wynikSrednia >= 3) {
+        if (wynikSrednia >= 3.0) {
             btnGood.setVisibility(View.VISIBLE);
-            btnGood.setOnClickListener(v -> showToast("Gratulacje! Otrzymujesz zaliczenie!"));
-        } else if (wynikSrednia < 3 && wynikSrednia > 0) {
+        } else if (wynikSrednia > 0.0) {
             btnNotGood.setVisibility(View.VISIBLE);
-            btnNotGood.setOnClickListener(v -> showToast("Wysyłam podanie o zaliczenie warunkowe"));
         }
-    }
-
-    private void updateAverageScoreAndButtons(double wynikSrednia, boolean pokazWynikSrednia) {
-        String formattedwynikSrednia = String.format("%.2f", wynikSrednia);
-        tvAverage.setText("Średnia wyników: " + formattedwynikSrednia);
-        tvAverage.setVisibility(View.VISIBLE);
-        showRelevantButton(wynikSrednia);
     }
 }
