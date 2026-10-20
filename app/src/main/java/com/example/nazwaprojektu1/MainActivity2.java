@@ -1,5 +1,6 @@
 package com.example.nazwaprojektu1;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -9,15 +10,17 @@ import android.os.Bundle;
 import android.os.Parcelable;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
 
 import java.util.Arrays;
 
-public class MainActivity2 extends AppCompatActivity {
-    int liczba = 0;
-    Adapter adapter;
-    RecyclerView recyclerView;
-    Button btn2; //gdy wszystkie oceny sa widoczne
+public class MainActivity2 extends AppCompatActivity implements Adapter.OnGradeSelectedListener {
+    private int liczba = 0;
+    private Adapter adapter;
+    private RecyclerView recyclerView;
+    private Button btn2;
+    private String imie;
+    private String nazwisko;
+    private String liczbaPrzedmiotow;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,40 +32,51 @@ public class MainActivity2 extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        //odbieranie danych
         Intent intent = getIntent();
-        String liczbaPrzedmiotow = intent.getStringExtra("liczbaPrzedmiotow");
-        String imie = intent.getStringExtra("imie");
-        String nazwisko = intent.getStringExtra("nazwisko");
-        String[] wszystkieOceny = getResources().getStringArray(R.array.wszystkieOceny);
+        if (intent != null) {
+            liczbaPrzedmiotow = intent.getStringExtra("liczbaPrzedmiotow");
+            imie = intent.getStringExtra("imie");
+            nazwisko = intent.getStringExtra("nazwisko");
+        }
 
+        try {
+            liczba = Integer.parseInt(liczbaPrzedmiotow);
+        } catch (NumberFormatException e) {
+            liczba = 5;
+        }
 
-        liczba = Integer.parseInt(liczbaPrzedmiotow);
-        //kopiowanie zakresu tablicy
-        String[] wszystkieOcenyDoWyswietlenia = Arrays.copyOfRange(wszystkieOceny, 0, liczba);
-        adapter = new Adapter(wszystkieOcenyDoWyswietlenia, this);
+        String[] wszystkieOcenyZasob = getResources().getStringArray(R.array.wszystkieOceny);
+        int maxDostepnych = Math.min(liczba, wszystkieOcenyZasob.length);
+        String[] przedmiotyDoWyswietlenia = Arrays.copyOfRange(wszystkieOcenyZasob, 0, maxDostepnych);
+
+        adapter = new Adapter(przedmiotyDoWyswietlenia, this);
         recyclerView.setAdapter(adapter);
 
         if (savedInstanceState != null) {
+            int[] zapisaneOceny = savedInstanceState.getIntArray("wybraneOceny");
+            if (zapisaneOceny != null) {
+                adapter.setWybraneOceny(zapisaneOceny);
+            }
             Parcelable listState = savedInstanceState.getParcelable("recyclerViewState");
-            recyclerView.getLayoutManager().onRestoreInstanceState(listState);
-
-            int[] wybraneOceny = savedInstanceState.getIntArray("wybraneOceny");
-            adapter.setwybraneOceny(wybraneOceny);
+            if (listState != null && recyclerView.getLayoutManager() != null) {
+                recyclerView.getLayoutManager().onRestoreInstanceState(listState);
+            }
+            checkButtonVisibility();
         }
 
         btn2.setOnClickListener(view -> {
-            int liczbaZaznaczonychOcen = 0;
+            int liczbaZaznaczonych = 0;
             int sumaOcen = 0;
 
             for (int i = 0; i < adapter.getItemCount(); i++) {
-                if (adapter.getScore(i) > 0) {
-                    liczbaZaznaczonychOcen++;
-                    sumaOcen += adapter.getScore(i);
+                int score = adapter.getScore(i);
+                if (score > 0) {
+                    liczbaZaznaczonych++;
+                    sumaOcen += score;
                 }
             }
 
-            if (liczbaZaznaczonychOcen == liczba) {
+            if (liczbaZaznaczonych == liczba && liczba > 0) {
                 double wynikSrednia = (double) sumaOcen / liczba;
                 Intent resultIntent = new Intent();
                 resultIntent.putExtra("wynikSrednia", wynikSrednia);
@@ -77,36 +91,33 @@ public class MainActivity2 extends AppCompatActivity {
     }
 
     @Override
-    protected void onSaveInstanceState(Bundle outState) { //zapisuje oceny przed zniszcz.
+    protected void onSaveInstanceState(@NonNull Bundle outState) {
         super.onSaveInstanceState(outState);
-        Parcelable listState = recyclerView.getLayoutManager().onSaveInstanceState();
-        outState.putParcelable("recyclerViewState", listState);
-
-        int[] wybraneOceny = adapter.getwybraneOceny();
-        outState.putIntArray("wybraneOceny", wybraneOceny);
+        if (recyclerView.getLayoutManager() != null) {
+            outState.putParcelable("recyclerViewState", recyclerView.getLayoutManager().onSaveInstanceState());
+        }
+        if (adapter != null) {
+            outState.putIntArray("wybraneOceny", adapter.getWybraneOceny());
+        }
     }
 
     @Override
-    protected void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-        Parcelable listState = savedInstanceState.getParcelable("recyclerViewState");
-        recyclerView.getLayoutManager().onRestoreInstanceState(listState);
-
-        int[] wybraneOceny = savedInstanceState.getIntArray("wybraneOceny");
-        adapter.setwybraneOceny(wybraneOceny);
-
+    public void onGradeSelected() {
         checkButtonVisibility();
     }
 
-    public void checkButtonVisibility() {
-        int liczbaZaznaczonychOcen = 0;
-        int[] wybraneOceny = adapter.getwybraneOceny();
-        for (int score : wybraneOceny) {
+    private void checkButtonVisibility() {
+        if (adapter == null) return;
+
+        int liczbaZaznaczonych = 0;
+        int[] oceny = adapter.getWybraneOceny();
+        for (int score : oceny) {
             if (score > 0) {
-                liczbaZaznaczonychOcen++;
+                liczbaZaznaczonych++;
             }
         }
-        if (liczbaZaznaczonychOcen == liczba) {
+
+        if (liczbaZaznaczonych == liczba && liczba > 0) {
             btn2.setVisibility(View.VISIBLE);
         } else {
             btn2.setVisibility(View.GONE);
